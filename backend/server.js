@@ -446,7 +446,7 @@ app.all('/api/*', (req, res) => {
 // Catch-all for any other routes - serve index.html for SPA
 app.get('*', (req, res) => {
   const indexPath = path.join(__dirname, 'public', 'index.html');
-  if (fs.existsExists(indexPath)) {
+  if (fs.existsSync(indexPath)) {
     res.sendFile(indexPath);
   } else {
     res.status(404).json({
