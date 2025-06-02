@@ -65,28 +65,6 @@
         -webkit-text-fill-color: transparent;
       }
 
-      .connection-status {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        background: rgba(255, 255, 255, 0.9);
-        border-radius: 15px;
-        padding: 10px 15px;
-        border: 1px solid #e0e0e0;
-      }
-
-      .status-dot {
-        width: 10px;
-        height: 10px;
-        border-radius: 50%;
-        background: #28a745;
-        animation: pulse 2s infinite;
-      }
-
-      .status-dot.offline {
-        background: #dc3545;
-      }
-
       .language-selector {
         display: flex;
         align-items: center;
@@ -190,13 +168,6 @@
         margin: 10px 0;
       }
 
-      .message.error {
-        background: rgba(220, 53, 69, 0.1);
-        border: 1px solid rgba(220, 53, 69, 0.3);
-        color: #721c24;
-        max-width: 100%;
-      }
-
       .message-actions {
         position: absolute;
         top: 5px;
@@ -269,18 +240,13 @@
         padding: 12px 16px;
       }
 
-      .send-btn:disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
-      }
-
       .voice-btn,
       .speaker-btn {
         background: rgba(118, 75, 162, 0.1);
         color: var(--secondary-color);
       }
 
-      .btn:hover:not(:disabled) {
+      .btn:hover {
         transform: translateY(-2px);
         box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
       }
@@ -401,964 +367,820 @@
         top: 20px;
         right: 20px;
         background: var(--glass-bg);
-        border-radius: 15px;
+        border-radius: 10px;
         padding: 10px 15px;
         box-shadow: var(--shadow);
+        display: none;
         z-index: 1000;
-        display: none;
       }
 
-      .file-input {
-        display: none;
-      }
-
-      /* Animations */
       @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(10px); }
-        to { opacity: 1; transform: translateY(0); }
-      }
-
-      @keyframes pulse {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.5; }
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
       }
 
       @keyframes typing {
-        0%, 80%, 100% { transform: scale(0); }
-        40% { transform: scale(1); }
+        0%,
+        80%,
+        100% {
+          transform: scale(0.8);
+          opacity: 0.5;
+        }
+        40% {
+          transform: scale(1);
+          opacity: 1;
+        }
       }
 
-      /* Responsive Design */
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.5;
+        }
+      }
+
+      .recording {
+        animation: pulse 1s infinite;
+      }
+
+      .speaking {
+        color: #28a745 !important;
+        animation: pulse 1s infinite;
+      }
+
       @media (max-width: 768px) {
         .main-content {
           grid-template-columns: 1fr;
         }
-        
-        .header h1 {
-          font-size: 2rem;
+
+        .role-selector {
+          grid-template-columns: 1fr;
         }
-        
+
         .header-top {
           flex-direction: column;
-          align-items: stretch;
+          align-items: flex-start;
         }
-        
-        .role-selector {
-          grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+
+        .input-section {
+          flex-wrap: wrap;
         }
       }
     </style>
   </head>
   <body>
     <div class="container">
-      <!-- Header Section -->
-      <header class="header">
+      <div class="header">
         <div class="header-top">
-          <h1>📊 Narrative AI</h1>
-          <div class="connection-status">
-            <div class="status-dot" id="statusDot"></div>
-            <span id="statusText">Connecting...</span>
+          <div>
+            <h1>🤖 Enhanced Narrative AI</h1>
+            <p>Intelligent business analyst with multilingual support</p>
           </div>
           <div class="language-selector">
-            <span>🌐</span>
-            <select id="languageSelect">
+            <span>🌍</span>
+            <select id="languageSelect" onchange="changeLanguage()">
               <option value="en">English</option>
-              <option value="es">Spanish</option>
-              <option value="fr">French</option>
-              <option value="de">German</option>
-              <option value="it">Italian</option>
-              <option value="pt">Portuguese</option>
-              <option value="ru">Russian</option>
-              <option value="zh">Chinese</option>
-              <option value="ja">Japanese</option>
-              <option value="ko">Korean</option>
-              <option value="ar">Arabic</option>
-              <option value="hi">Hindi</option>
+              <option value="es">Español</option>
+              <option value="fr">Français</option>
+              <option value="de">Deutsch</option>
+              <option value="it">Italiano</option>
+              <option value="pt">Português</option>
+              <option value="ru">Русский</option>
+              <option value="zh">中文</option>
+              <option value="ja">日本語</option>
+              <option value="ko">한국어</option>
+              <option value="ar">العربية</option>
+              <option value="hi">हिंदी</option>
             </select>
           </div>
         </div>
-        
+
         <div class="role-selector">
-          <div class="role-card active" data-role="ceo">
-            <h3>👔 CEO</h3>
-            <p>Strategic insights and growth opportunities</p>
+          <div class="role-card active" onclick="selectRole('ceo')">
+            <h3>🎯 CEO</h3>
+            <p>Strategic growth insights</p>
           </div>
-          <div class="role-card" data-role="marketer">
-            <h3>📢 Marketer</h3>
-            <p>Campaign performance and customer insights</p>
+          <div class="role-card" onclick="selectRole('marketer')">
+            <h3>📈 Marketer</h3>
+            <p>Campaign performance</p>
           </div>
-          <div class="role-card" data-role="product">
-            <h3>🚀 Product Manager</h3>
-            <p>Feature analysis and user engagement</p>
+          <div class="role-card" onclick="selectRole('product')">
+            <h3>🛠 Product Lead</h3>
+            <p>User engagement</p>
           </div>
-          <div class="role-card" data-role="analyst">
-            <h3>📈 Data Analyst</h3>
-            <p>Deep statistical analysis and trends</p>
+          <div class="role-card" onclick="selectRole('analyst')">
+            <h3>📊 Analyst</h3>
+            <p>Detailed metrics</p>
           </div>
         </div>
-      </header>
+      </div>
 
-      <!-- Main Content -->
-      <main class="main-content">
-        <!-- Left Panel - Chat Interface -->
-        <section class="left-panel">
-          <h2>💬 Chat with AI</h2>
-          
-          <div class="chat-container" id="chatContainer">
-            <div class="message system">
-              Welcome! I'm your AI business analyst. Upload data or ask me anything about your business.
+      <div class="main-content">
+        <div class="left-panel">
+          <div class="stats-grid" id="statsGrid" style="display: none"></div>
+          <div class="chart-container">
+            <canvas id="mainChart"></canvas>
+          </div>
+          <div class="insights-panel" id="insightsPanel">
+            <h4>🔍 Key Insights</h4>
+            <div id="insightsList">
+              <div class="insight-card">
+                <strong>🚀 Getting Started</strong>
+                <p>
+                  Upload data, ask questions, or explore insights in your
+                  preferred language.
+                </p>
+              </div>
             </div>
           </div>
-          
+        </div>
+
+        <div class="right-panel">
+          <h3>💬 Chat with Narrative AI</h3>
+          <div class="chat-container" id="chatContainer">
+            <div class="message ai">
+              <strong>Narrative AI:</strong> Hello! I'm your multilingual
+              business analyst. I can help with data analysis, insights, and
+              strategy in your preferred language. Upload CSV files or ask
+              questions to get started!
+              <div class="message-actions">
+                <button
+                  class="action-btn"
+                  onclick="speakMessage(this)"
+                  title="Speak"
+                >
+                  🔊
+                </button>
+              </div>
+            </div>
+          </div>
+
           <div class="typing-indicator" id="typingIndicator">
+            <strong>Narrative AI is thinking</strong>
             <div class="typing-dots">
               <span></span>
               <span></span>
               <span></span>
             </div>
-            AI is thinking...
           </div>
-          
+
           <div class="input-section">
-            <input type="file" id="fileInput" class="file-input" multiple accept=".csv" />
-            <button class="file-upload-btn" onclick="document.getElementById('fileInput').click()">
+            <button
+              class="file-upload-btn"
+              onclick="document.getElementById('fileInput').click()"
+              title="Upload CSV"
+            >
               📎
             </button>
-            <input 
-              type="text" 
-              class="chat-input" 
-              id="chatInput" 
-              placeholder="Ask about your data or business insights..."
+            <input
+              type="file"
+              id="fileInput"
+              style="display: none"
+              accept=".csv"
+              multiple
+            />
+            <input
+              type="text"
+              class="chat-input"
+              id="chatInput"
+              placeholder="Ask me anything..."
               onkeypress="handleKeyPress(event)"
             />
-            <button class="voice-btn" id="voiceBtn">🎤</button>
-            <button class="speaker-btn" id="speakerBtn">🔊</button>
-            <button class="send-btn" id="sendBtn" onclick="sendMessage()">Send</button>
+            <button
+              class="voice-btn"
+              onclick="toggleVoice()"
+              title="Voice input"
+              id="voiceBtn"
+            >
+              🎤
+            </button>
+            <button
+              class="speaker-btn"
+              onclick="toggleAutoSpeak()"
+              title="Auto-speak responses"
+              id="speakerBtn"
+            >
+              🔊
+            </button>
+            <button class="send-btn" onclick="sendMessage()">Send</button>
           </div>
-        </section>
-
-        <!-- Right Panel - Analytics Dashboard -->
-        <section class="right-panel">
-          <h2>📊 Analytics Dashboard</h2>
-          
-          <div class="stats-grid" id="statsGrid">
-            <div class="stat-card">
-              <div class="stat-value" id="recordCount">0</div>
-              <div class="stat-label">Records</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-value" id="columnCount">0</div>
-              <div class="stat-label">Columns</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-value" id="fileCount">0</div>
-              <div class="stat-label">Files</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-value" id="analysisCount">0</div>
-              <div class="stat-label">Analyses</div>
-            </div>
-          </div>
-          
-          <div class="chart-container">
-            <canvas id="dataChart"></canvas>
-          </div>
-          
-          <div class="insights-panel" id="insightsPanel">
-            <h3>🎯 Key Insights</h3>
-            <div id="insightsList">
-              <p>Upload data to see insights here...</p>
-            </div>
-          </div>
-        </section>
-      </main>
+        </div>
+      </div>
     </div>
 
-    <!-- Audio Controls -->
     <div class="audio-controls" id="audioControls">
-      <button onclick="toggleAudio()">⏸️</button>
+      <button onclick="stopSpeech()" title="Stop">⏹️</button>
       <div class="progress-bar">
         <div class="progress-fill" id="progressFill"></div>
       </div>
-      <span id="audioTime">0:00</span>
+      <span id="audioStatus">Speaking...</span>
     </div>
 
-    <!-- Status Indicator -->
-    <div class="status-indicator" id="statusIndicator">
-      Processing...
-    </div>
+    <div class="status-indicator" id="statusIndicator"></div>
 
     <script>
-      // Global Configuration
-      const API_BASE_URL = 'http://localhost:3000/api';
-      let currentRole = 'ceo';
-      let currentLanguage = 'en';
-      let conversationHistory = [];
-      let uploadedData = [];
-      let currentChart = null;
-      let speechSynthesis = window.speechSynthesis;
-      let recognition = null;
-      let isListening = false;
+      // Configuration
+      const GROQ_API_KEY =
+        "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";
+      const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
+      const MODEL = "llama3-8b-8192";
 
-      // Initialize the application
-      document.addEventListener('DOMContentLoaded', function() {
-        initializeApp();
+      // State management
+      const state = {
+        currentRole: "ceo",
+        currentLanguage: "en",
+        uploadedData: [],
+        chart: null,
+        isListening: false,
+        isSpeaking: false,
+        autoSpeak: false,
+        conversationHistory: [],
+        speechSynthesis: window.speechSynthesis,
+        currentUtterance: null,
+      };
+
+      // Language configurations
+      const languages = {
+        en: { name: "English", voice: "en-US" },
+        es: { name: "Spanish", voice: "es-ES" },
+        fr: { name: "French", voice: "fr-FR" },
+        de: { name: "German", voice: "de-DE" },
+        it: { name: "Italian", voice: "it-IT" },
+        pt: { name: "Portuguese", voice: "pt-BR" },
+        ru: { name: "Russian", voice: "ru-RU" },
+        zh: { name: "Chinese", voice: "zh-CN" },
+        ja: { name: "Japanese", voice: "ja-JP" },
+        ko: { name: "Korean", voice: "ko-KR" },
+        ar: { name: "Arabic", voice: "ar-SA" },
+        hi: { name: "Hindi", voice: "hi-IN" },
+      };
+
+      // Initialize application
+      document.addEventListener("DOMContentLoaded", init);
+
+      function init() {
         setupEventListeners();
-        checkServerConnection();
-      });
-
-      async function initializeApp() {
-        console.log('🚀 Initializing Narrative AI...');
-        
-        // Setup speech recognition if available
-        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-          const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-          recognition = new SpeechRecognition();
-          recognition.continuous = false;
-          recognition.interimResults = false;
-          recognition.lang = 'en-US';
-          
-          recognition.onresult = function(event) {
-            const transcript = event.results[0][0].transcript;
-            document.getElementById('chatInput').value = transcript;
-            sendMessage();
-          };
-          
-          recognition.onerror = function(event) {
-            console.error('Speech recognition error:', event.error);
-            showStatus('Voice recognition error', 'error');
-          };
-        } else {
-          document.getElementById('voiceBtn').style.display = 'none';
-        }
+        createDefaultChart();
+        showStatus("Ready", 2000);
       }
 
       function setupEventListeners() {
-        // Role selection
-        document.querySelectorAll('.role-card').forEach(card => {
-          card.addEventListener('click', function() {
-            document.querySelectorAll('.role-card').forEach(c => c.classList.remove('active'));
-            this.classList.add('active');
-            currentRole = this.dataset.role;
-            addSystemMessage(`Switched to ${this.querySelector('h3').textContent} perspective`);
-          });
+        document
+          .getElementById("fileInput")
+          .addEventListener("change", handleFileSelect);
+
+        // Keyboard shortcuts
+        document.addEventListener("keydown", (e) => {
+          if (e.ctrlKey && e.key === "Enter") sendMessage();
+          if (e.key === "Escape") stopSpeech();
         });
-
-        // Language selection
-        document.getElementById('languageSelect').addEventListener('change', function() {
-          currentLanguage = this.value;
-          if (recognition) {
-            recognition.lang = this.value === 'en' ? 'en-US' : `${this.value}-${this.value.toUpperCase()}`;
-          }
-          addSystemMessage(`Language changed to ${this.options[this.selectedIndex].text}`);
-        });
-
-        // File upload
-        document.getElementById('fileInput').addEventListener('change', handleFileUpload);
-
-        // Voice controls
-        document.getElementById('voiceBtn').addEventListener('click', toggleVoiceRecognition);
-        document.getElementById('speakerBtn').addEventListener('click', toggleSpeech);
       }
 
-      async function checkServerConnection() {
-        try {
-          const response = await fetch(`${API_BASE_URL}/health`);
-          const data = await response.json();
-          
-          if (data.status === 'OK') {
-            updateConnectionStatus(true, 'Connected to server');
-            if (data.groqConnected) {
-              addSystemMessage('🤖 AI engine ready - Groq API connected');
-            } else {
-              addSystemMessage('⚠️ AI engine not configured - check GROQ_API_KEY');
+      function selectRole(role) {
+        state.currentRole = role;
+        document
+          .querySelectorAll(".role-card")
+          .forEach((card) => card.classList.remove("active"));
+        event.target.closest(".role-card").classList.add("active");
+
+        const roleNames = {
+          ceo: "CEO",
+          marketer: "Marketing",
+          product: "Product",
+          analyst: "Analytics",
+        };
+        addMessage("system", `Role switched to ${roleNames[role]} perspective`);
+      }
+
+      function changeLanguage() {
+        const select = document.getElementById("languageSelect");
+        state.currentLanguage = select.value;
+        showStatus(
+          `Language changed to ${languages[state.currentLanguage].name}`,
+          2000
+        );
+
+        // Update UI text based on language
+        updateUILanguage();
+      }
+
+      function updateUILanguage() {
+        // This would typically involve loading translation files
+        // For now, we'll just show a confirmation
+        const langName = languages[state.currentLanguage].name;
+        addMessage(
+          "system",
+          `🌍 Language set to ${langName}. AI will respond in ${langName}.`
+        );
+      }
+
+      async function handleFileSelect(e) {
+        const files = Array.from(e.target.files);
+        showStatus("Processing files...", 0);
+
+        for (const file of files) {
+          if (file.name.endsWith(".csv")) {
+            try {
+              const data = await parseCSV(file);
+              state.uploadedData = state.uploadedData.concat(data);
+              addMessage(
+                "system",
+                `✅ ${file.name} uploaded (${data.length} records)`
+              );
+            } catch (error) {
+              addMessage(
+                "system",
+                `❌ Error with ${file.name}: ${error.message}`
+              );
             }
           }
-        } catch (error) {
-          updateConnectionStatus(false, 'Server offline');
-          addSystemMessage('❌ Cannot connect to server. Please start the backend server.');
-          console.error('Connection error:', error);
         }
-      }
 
-      function updateConnectionStatus(connected, message) {
-        const statusDot = document.getElementById('statusDot');
-        const statusText = document.getElementById('statusText');
-        
-        statusDot.className = connected ? 'status-dot' : 'status-dot offline';
-        statusText.textContent = message;
-      }
-
-      function handleKeyPress(event) {
-        if (event.key === 'Enter' && !event.shiftKey) {
-          event.preventDefault();
-          sendMessage();
+        if (state.uploadedData.length > 0) {
+          analyzeData();
         }
+
+        showStatus("Files processed", 2000);
+        e.target.value = "";
       }
 
-      async function sendMessage() {
-        const input = document.getElementById('chatInput');
-        const message = input.value.trim();
-        
-        if (!message) return;
+      function parseCSV(file) {
+        return new Promise((resolve, reject) => {
+          Papa.parse(file, {
+            header: true,
+            skipEmptyLines: true,
+            dynamicTyping: true,
+            complete: (results) => {
+              if (results.errors.length > 0) {
+                reject(new Error(results.errors[0].message));
+              } else {
+                resolve(results.data);
+              }
+            },
+          });
+        });
+      }
 
-        // Add user message to chat
-        addMessage(message, 'user');
-        input.value = '';
-        
-        // Show typing indicator
-        showTypingIndicator();
-        
+      function analyzeData() {
+        generateStats();
+        createChart();
+
+        const prompt = `Analyze this business data in ${
+          languages[state.currentLanguage].name
+        }: ${state.uploadedData.length} records with columns: ${Object.keys(
+          state.uploadedData[0]
+        ).join(", ")}. Provide ${state.currentRole}-focused insights.`;
+        sendToGroqAPI(prompt, true);
+      }
+
+      function generateStats() {
+        const data = state.uploadedData;
+        if (data.length === 0) return;
+
+        const numericColumns = Object.keys(data[0]).filter(
+          (key) =>
+            typeof data[0][key] === "number" || !isNaN(parseFloat(data[0][key]))
+        );
+
+        const stats = [
+          { label: "Records", value: data.length.toLocaleString() },
+          { label: "Columns", value: Object.keys(data[0]).length },
+        ];
+
+        // Add relevant business metrics
+        if (numericColumns.includes("revenue")) {
+          const total = data.reduce(
+            (sum, row) => sum + (parseFloat(row.revenue) || 0),
+            0
+          );
+          stats.unshift({
+            label: "Revenue",
+            value: `$${total.toLocaleString()}`,
+          });
+        }
+
+        if (numericColumns.includes("users")) {
+          const total = data.reduce(
+            (sum, row) => sum + (parseFloat(row.users) || 0),
+            0
+          );
+          stats.unshift({ label: "Users", value: total.toLocaleString() });
+        }
+
+        document.getElementById("statsGrid").innerHTML = stats
+          .map(
+            (stat) => `
+                <div class="stat-card">
+                    <div class="stat-value">${stat.value}</div>
+                    <div class="stat-label">${stat.label}</div>
+                </div>
+            `
+          )
+          .join("");
+
+        document.getElementById("statsGrid").style.display = "grid";
+      }
+
+      function createChart() {
+        const canvas = document.getElementById("mainChart");
+        const ctx = canvas.getContext("2d");
+
+        if (state.chart) {
+          state.chart.destroy();
+        }
+
+        let labels, values;
+
+        if (state.uploadedData.length > 0) {
+          const data = state.uploadedData.slice(0, 15);
+          labels = data.map(
+            (row, i) => row.date || row.product || row.name || `Item ${i + 1}`
+          );
+          values = data.map(
+            (row) =>
+              row.revenue ||
+              row.users ||
+              row.value ||
+              row.sales ||
+              Math.random() * 100
+          );
+        } else {
+          labels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"];
+          values = [65, 78, 90, 81, 95, 105];
+        }
+
+        state.chart = new Chart(ctx, {
+          type: "line",
+          data: {
+            labels,
+            datasets: [
+              {
+                label:
+                  state.uploadedData.length > 0
+                    ? "Business Data"
+                    : "Sample Metrics",
+                data: values,
+                borderColor: "#667eea",
+                backgroundColor: "rgba(102, 126, 234, 0.1)",
+                tension: 0.4,
+                fill: true,
+                pointBackgroundColor: "#667eea",
+                pointBorderColor: "#fff",
+                pointBorderWidth: 2,
+                pointRadius: 6,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: true, position: "top" } },
+            scales: {
+              y: { beginAtZero: true, grid: { color: "rgba(0,0,0,0.1)" } },
+              x: { grid: { color: "rgba(0,0,0,0.1)" } },
+            },
+          },
+        });
+      }
+
+      function createDefaultChart() {
+        createChart();
+      }
+
+      async function sendToGroqAPI(message, isDataAnalysis = false) {
+        showTyping(true);
+        showStatus("Thinking...", 0);
+
+        const systemPrompt = `You are Narrative AI, a multilingual business analyst. Always respond in ${
+          languages[state.currentLanguage].name
+        } language.
+
+Current context:
+- User role: ${state.currentRole.toUpperCase()}
+- Language: ${languages[state.currentLanguage].name}
+- Data available: ${state.uploadedData.length > 0 ? "Yes" : "No"}
+
+Role focus:
+- CEO: Strategic insights, growth, ROI
+- Marketer: Campaigns, conversions, traffic
+- Product: Features, engagement, usability
+- Analyst: Detailed metrics, statistical analysis
+
+Provide clear, actionable insights in the requested language. Be conversational and professional.`;
+
+        const userMessage = { role: "user", content: message };
+        state.conversationHistory.push(userMessage);
+
         try {
-          const response = await fetch(`${API_BASE_URL}/chat`, {
-            method: 'POST',
+          const response = await fetch(GROQ_API_URL, {
+            method: "POST",
             headers: {
-              'Content-Type': 'application/json',
+              Authorization: `Bearer ${GROQ_API_KEY}`,
+              "Content-Type": "application/json",
             },
             body: JSON.stringify({
-              message: message,
-              role: currentRole,
-              language: currentLanguage,
-              conversationHistory: conversationHistory.slice(-6),
-              hasData: uploadedData.length > 0,
-              dataContext: uploadedData.length > 0 ? `${uploadedData.length} records loaded` : ''
-            })
+              model: MODEL,
+              messages: [
+                { role: "system", content: systemPrompt },
+                ...state.conversationHistory.slice(-8),
+              ],
+              max_tokens: 1000,
+              temperature: 0.7,
+            }),
           });
 
           if (!response.ok) {
-            throw new Error(`Server error: ${response.status}`);
+            throw new Error(`API Error: ${response.status}`);
           }
 
           const data = await response.json();
-          
-          // Hide typing indicator
-          hideTypingIndicator();
-          
-          // Add AI response to chat
-          addMessage(data.response, 'ai');
-          
-          // Update conversation history
-          conversationHistory.push(
-            { role: 'user', content: message },
-            { role: 'assistant', content: data.response }
-          );
-          
-          // Speak response if speech is enabled
-          if (document.getElementById('speakerBtn').classList.contains('active')) {
-            speakText(data.response);
+          const aiResponse = data.choices[0].message.content;
+
+          state.conversationHistory.push({
+            role: "assistant",
+            content: aiResponse,
+          });
+
+          showTyping(false);
+          addMessage("ai", aiResponse);
+
+          if (state.autoSpeak) {
+            speakText(aiResponse);
           }
-          
+
+          if (isDataAnalysis) {
+            updateInsights(aiResponse);
+          }
+
+          showStatus("Response received", 2000);
         } catch (error) {
-          hideTypingIndicator();
-          addMessage(`Error: ${error.message}`, 'error');
-          console.error('Chat error:', error);
+          showTyping(false);
+          showStatus("Error occurred", 3000);
+
+          let errorMsg = "I apologize, but I'm having connectivity issues. ";
+          if (error.message.includes("401"))
+            errorMsg += "Authentication problem detected.";
+          else if (error.message.includes("429"))
+            errorMsg += "Rate limit reached, please wait.";
+          else errorMsg += "Please try again in a moment.";
+
+          addMessage("ai", errorMsg);
         }
       }
 
-      async function handleFileUpload(event) {
-        const files = Array.from(event.target.files);
-        if (files.length === 0) return;
+      function updateInsights(response) {
+        const insights = response
+          .split(/[.!?]/)
+          .filter((s) => s.trim().length > 20)
+          .slice(0, 3);
 
-        showStatus('Uploading files...', 'info');
-        
-        const formData = new FormData();
-        files.forEach(file => formData.append('files', file));
-
-        try {
-          const response = await fetch(`${API_BASE_URL}/upload`, {
-            method: 'POST',
-            body: formData
-          });
-
-          if (!response.ok) {
-            throw new Error(`Upload failed: ${response.status}`);
-          }
-
-          const data = await response.json();
-          
-          let totalRecords = 0;
-          let totalColumns = 0;
-          let successCount = 0;
-          
-          data.results.forEach(result => {
-            if (result.success) {
-              successCount++;
-              totalRecords += result.recordCount;
-              totalColumns = Math.max(totalColumns, result.columns.length);
-              
-              // Store data for analysis
-              uploadedData = [...uploadedData, ...result.data];
-              
-              // Display insights
-              displayInsights(result.insights);
-              
-              addSystemMessage(`✅ ${result.filename}: ${result.recordCount} records loaded`);
-            } else {
-              addMessage(`❌ Error loading ${result.filename}: ${result.error}`, 'error');
-            }
-          });
-
-          // Update stats
-          updateStats(totalRecords, totalColumns, successCount);
-          
-          // Create visualization
-          if (uploadedData.length > 0) {
-            createDataVisualization();
-          }
-          
-          showStatus(`Successfully processed ${successCount}/${files.length} files`, 'success');
-          
-        } catch (error) {
-          showStatus('Upload failed', 'error');
-          addMessage(`Upload error: ${error.message}`, 'error');
-          console.error('Upload error:', error);
-        }
-        
-        // Clear file input
-        event.target.value = '';
+        document.getElementById("insightsList").innerHTML = insights
+          .map(
+            (insight, i) => `
+                <div class="insight-card">
+                    <strong>💡 Insight ${i + 1}</strong>
+                    <p>${insight.trim()}</p>
+                </div>
+            `
+          )
+          .join("");
       }
 
-      function addMessage(content, type) {
-        const chatContainer = document.getElementById('chatContainer');
-        const messageDiv = document.createElement('div');
-        messageDiv.className = `message ${type}`;
-        messageDiv.innerHTML = `
-          ${content}
-          <div class="message-actions">
-            <button class="action-btn" onclick="copyMessage(this)" title="Copy">📋</button>
-            <button class="action-btn" onclick="speakMessage(this)" title="Speak">🔊</button>
-          </div>
-        `;
-        
+      function addMessage(sender, message) {
+        const chatContainer = document.getElementById("chatContainer");
+        const messageDiv = document.createElement("div");
+        messageDiv.className = `message ${sender}`;
+
+        let content = "";
+        if (sender === "ai") {
+          content = `<strong>Narrative AI:</strong> ${message}`;
+          content += `<div class="message-actions">
+                    <button class="action-btn" onclick="speakMessage(this)" title="Speak">🔊</button>
+                </div>`;
+        } else if (sender === "system") {
+          content = message;
+        } else {
+          content = message;
+        }
+
+        messageDiv.innerHTML = content;
         chatContainer.appendChild(messageDiv);
         chatContainer.scrollTop = chatContainer.scrollHeight;
       }
 
-      function addSystemMessage(content) {
-        addMessage(content, 'system');
-      }
+      function sendMessage() {
+        const input = document.getElementById("chatInput");
+        const message = input.value.trim();
 
-      function showTypingIndicator() {
-        document.getElementById('typingIndicator').style.display = 'block';
-      }
+        if (!message) return;
 
-      function hideTypingIndicator() {
-        document.getElementById('typingIndicator').style.display = 'none';
-      }
+        addMessage("user", message);
+        input.value = "";
 
-      function updateStats(records, columns, files) {
-        document.getElementById('recordCount').textContent = records.toLocaleString();
-        document.getElementById('columnCount').textContent = columns;
-        document.getElementById('fileCount').textContent = files;
-        document.getElementById('analysisCount').textContent = conversationHistory.length / 2;
-      }
-
-      function displayInsights(insights) {
-        const insightsList = document.getElementById('insightsList');
-        
-        if (insights && insights.length > 0) {
-          insightsList.innerHTML = '';
-          insights.forEach(insight => {
-            const insightDiv = document.createElement('div');
-            insightDiv.className = 'insight-card';
-            insightDiv.innerHTML = `
-              <h4>${insight.title}</h4>
-              <p>${insight.content}</p>
-            `;
-            insightsList.appendChild(insightDiv);
-          });
-        }
-      }
-
-      function createDataVisualization() {
-        const canvas = document.getElementById('dataChart');
-        const ctx = canvas.getContext('2d');
-        
-        if (currentChart) {
-          currentChart.destroy();
-        }
-
-        // Sample visualization - you can customize this based on your data
-        if (uploadedData.length > 0) {
-          const numericColumns = Object.keys(uploadedData[0]).filter(key => {
-            return !isNaN(parseFloat(uploadedData[0][key]));
-          });
-
-          if (numericColumns.length > 0) {
-            const labels = uploadedData.slice(0, 10).map((_, index) => `Record ${index + 1}`);
-            const datasets = numericColumns.slice(0, 3).map((column, index) => ({
-              label: column,
-              data: uploadedData.slice(0, 10).map(row => parseFloat(row[column]) || 0),
-              backgroundColor: `hsla(${index * 120}, 70%, 50%, 0.6)`,
-              borderColor: `hsla(${index * 120}, 70%, 50%, 1)`,
-              borderWidth: 2
-            }));
-
-            currentChart = new Chart(ctx, {
-              type: 'line',
-              data: { labels, datasets },
-              options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                  title: {
-                    display: true,
-                    text: 'Data Overview'
-                  }
-                },
-                scales: {
-                  y: {
-                    beginAtZero: true
-                  }
-                }
-              }
-            });
-          }
-        }
-      }
-
-      function toggleVoiceRecognition() {
-        if (!recognition) {
-          showStatus('Voice recognition not supported', 'error');
-          return;
-        }
-
-        const voiceBtn = document.getElementById('voiceBtn');
-        
-        if (isListening) {
-          recognition.stop();
-          voiceBtn.textContent = '🎤';
-          isListening = false;
-          showStatus('Voice recognition stopped', 'info');
-        } else {
-          recognition.start();
-          voiceBtn.textContent = '🛑';
-          isListening = true;
-          showStatus('Listening... Speak now', 'info');
-        }
-      }
-
-      function toggleSpeech() {
-        const speakerBtn = document.getElementById('speakerBtn');
-        speakerBtn.classList.toggle('active');
-        
-        if (speakerBtn.classList.contains('active')) {
-          speakerBtn.style.background = 'var(--primary-gradient)';
-          speakerBtn.style.color = 'white';
-          showStatus('Text-to-speech enabled', 'info');
-        } else {
-          speakerBtn.style.background = 'rgba(118, 75, 162, 0.1)';
-          speakerBtn.style.color = 'var(--secondary-color)';
-          showStatus('Text-to-speech disabled', 'info');
-        }
-      }
-
-      function speakText(text) {
-        if (speechSynthesis && speechSynthesis.speaking) {
-          speechSynthesis.cancel();
-        }
-        
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = languages[currentLanguage] || 'en-US';
-        utterance.rate = 0.9;
-        utterance.pitch = 1;
-        
-        utterance.onstart = () => {
-          showAudioControls(true);
-        };
-        
-        utterance.onend = () => {
-          showAudioControls(false);
-        };
-        
-        speechSynthesis.speak(utterance);
-      }
-
-      function showAudioControls(show) {
-        const audioControls = document.getElementById('audioControls');
-        audioControls.style.display = show ? 'flex' : 'none';
-      }
-
-      function toggleAudio() {
-        if (speechSynthesis.speaking) {
-          if (speechSynthesis.paused) {
-            speechSynthesis.resume();
-          } else {
-            speechSynthesis.pause();
-          }
-        }
-      }
-
-      function copyMessage(button) {
-        const message = button.closest('.message');
-        const text = message.textContent.replace(/📋🔊/g, '').trim();
-        
-        navigator.clipboard.writeText(text).then(() => {
-          showStatus('Message copied to clipboard', 'success');
-        }).catch(() => {
-          showStatus('Failed to copy message', 'error');
-        });
+        sendToGroqAPI(message);
       }
 
       function speakMessage(button) {
-        const message = button.closest('.message');
-        const text = message.textContent.replace(/📋🔊/g, '').trim();
-        speakText(text);
+        const messageText = button
+          .closest(".message")
+          .textContent.replace("Narrative AI:", "")
+          .trim();
+        speakText(messageText);
       }
 
-      function showStatus(message, type = 'info') {
-        const statusIndicator = document.getElementById('statusIndicator');
-        statusIndicator.textContent = message;
-        statusIndicator.className = `status-indicator ${type}`;
-        statusIndicator.style.display = 'block';
-        
-        // Auto-hide after 3 seconds
-        setTimeout(() => {
-          statusIndicator.style.display = 'none';
-        }, 3000);
-      }
-
-      // Language voice mapping for speech synthesis
-      const languages = {
-        'en': 'en-US',
-        'es': 'es-ES',
-        'fr': 'fr-FR',
-        'de': 'de-DE',
-        'it': 'it-IT',
-        'pt': 'pt-BR',
-        'ru': 'ru-RU',
-        'zh': 'zh-CN',
-        'ja': 'ja-JP',
-        'ko': 'ko-KR',
-        'ar': 'ar-SA',
-        'hi': 'hi-IN'
-      };
-
-      // Additional utility functions for enhanced functionality
-      
-      async function analyzeData(analysisType = 'general') {
-        if (uploadedData.length === 0) {
-          addMessage('No data available for analysis. Please upload a CSV file first.', 'error');
-          return;
+      function speakText(text) {
+        if (state.isSpeaking) {
+          stopSpeech();
         }
 
-        showStatus('Analyzing data...', 'info');
-        
-        try {
-          const response = await fetch(`${API_BASE_URL}/analyze`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              data: uploadedData,
-              role: currentRole,
-              language: currentLanguage,
-              analysisType: analysisType
-            })
-          });
+        const utterance = new SpeechSynthesisUtterance(text);
+        const voices = state.speechSynthesis.getVoices();
+        const targetLang = languages[state.currentLanguage].voice;
 
-          if (!response.ok) {
-            throw new Error(`Analysis failed: ${response.status}`);
-          }
+        const voice =
+          voices.find((v) => v.lang.startsWith(targetLang.split("-")[0])) ||
+          voices[0];
+        if (voice) utterance.voice = voice;
 
-          const data = await response.json();
-          
-          // Add analysis to chat
-          addMessage(data.analysis, 'ai');
-          
-          // Update insights
-          displayInsights(data.insights);
-          
-          // Update stats
-          updateStats(data.stats.recordCount, data.stats.columnCount, document.getElementById('fileCount').textContent);
-          
-          showStatus('Analysis complete', 'success');
-          
-        } catch (error) {
-          showStatus('Analysis failed', 'error');
-          addMessage(`Analysis error: ${error.message}`, 'error');
-          console.error('Analysis error:', error);
-        }
-      }
+        utterance.rate = 0.9;
+        utterance.pitch = 1.0;
+        utterance.volume = 0.8;
 
-      // Add quick analysis buttons
-      function addQuickAnalysisButtons() {
-        if (uploadedData.length === 0) return;
-        
-        const quickActions = document.createElement('div');
-        quickActions.className = 'quick-actions';
-        quickActions.innerHTML = `
-          <div style="display: flex; gap: 10px; margin: 10px 0; flex-wrap: wrap;">
-            <button onclick="analyzeData('trends')" class="quick-btn">📈 Analyze Trends</button>
-            <button onclick="analyzeData('performance')" class="quick-btn">⚡ Performance Metrics</button>
-            <button onclick="analyzeData('insights')" class="quick-btn">💡 Key Insights</button>
-            <button onclick="exportAnalysis()" class="quick-btn">📊 Export Analysis</button>
-          </div>
-        `;
-        
-        const chatContainer = document.getElementById('chatContainer');
-        const existingActions = chatContainer.querySelector('.quick-actions');
-        if (existingActions) {
-          existingActions.remove();
-        }
-        chatContainer.appendChild(quickActions);
-        chatContainer.scrollTop = chatContainer.scrollHeight;
-      }
-
-      function exportAnalysis() {
-        if (uploadedData.length === 0) {
-          addMessage('No data to export', 'error');
-          return;
-        }
-
-        const analysisData = {
-          timestamp: new Date().toISOString(),
-          role: currentRole,
-          language: currentLanguage,
-          dataStats: {
-            records: uploadedData.length,
-            columns: Object.keys(uploadedData[0] || {}).length
-          },
-          conversationHistory: conversationHistory,
-          insights: Array.from(document.querySelectorAll('.insight-card')).map(card => ({
-            title: card.querySelector('h4')?.textContent || '',
-            content: card.querySelector('p')?.textContent || ''
-          }))
+        utterance.onstart = () => {
+          state.isSpeaking = true;
+          document.getElementById("speakerBtn").classList.add("speaking");
+          showAudioControls(true);
         };
 
-        const blob = new Blob([JSON.stringify(analysisData, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `analysis-${new Date().toISOString().split('T')[0]}.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        
-        showStatus('Analysis exported successfully', 'success');
+        utterance.onend = () => {
+          state.isSpeaking = false;
+          document.getElementById("speakerBtn").classList.remove("speaking");
+          showAudioControls(false);
+        };
+
+        state.currentUtterance = utterance;
+        state.speechSynthesis.speak(utterance);
       }
 
-      // Enhanced file upload with better error handling
-      function enhancedFileUpload(files) {
-        return new Promise((resolve, reject) => {
-          const results = [];
-          let processedFiles = 0;
-          
-          files.forEach((file, index) => {
-            Papa.parse(file, {
-              header: true,
-              skipEmptyLines: true,
-              complete: function(result) {
-                if (result.errors.length > 0) {
-                  results[index] = {
-                    filename: file.name,
-                    success: false,
-                    error: result.errors[0].message
-                  };
-                } else {
-                  results[index] = {
-                    filename: file.name,
-                    success: true,
-                    data: result.data,
-                    recordCount: result.data.length,
-                    columns: result.meta.fields
-                  };
-                }
-                
-                processedFiles++;
-                if (processedFiles === files.length) {
-                  resolve(results);
-                }
-              },
-              error: function(error) {
-                results[index] = {
-                  filename: file.name,
-                  success: false,
-                  error: error.message
-                };
-                
-                processedFiles++;
-                if (processedFiles === files.length) {
-                  resolve(results);
-                }
-              }
-            });
-          });
-        });
+      function stopSpeech() {
+        if (state.speechSynthesis.speaking) {
+          state.speechSynthesis.cancel();
+        }
+        state.isSpeaking = false;
+        document.getElementById("speakerBtn").classList.remove("speaking");
+        showAudioControls(false);
       }
 
-      // Add CSS for quick action buttons
-      const quickActionStyles = `
-        .quick-actions {
-          background: rgba(255, 255, 255, 0.9);
-          border-radius: 15px;
-          padding: 15px;
-          margin: 15px 0;
-          border: 1px solid rgba(0, 0, 0, 0.1);
-        }
-        
-        .quick-btn {
-          background: var(--primary-gradient);
-          color: white;
-          border: none;
-          border-radius: 20px;
-          padding: 8px 15px;
-          cursor: pointer;
-          font-size: 0.9rem;
-          transition: var(--transition);
-        }
-        
-        .quick-btn:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
-        }
-        
-        .status-indicator.success {
-          background: rgba(40, 167, 69, 0.9);
-          color: white;
-        }
-        
-        .status-indicator.error {
-          background: rgba(220, 53, 69, 0.9);
-          color: white;
-        }
-        
-        .status-indicator.info {
-          background: rgba(23, 162, 184, 0.9);
-          color: white;
-        }
-      `;
+      function toggleAutoSpeak() {
+        state.autoSpeak = !state.autoSpeak;
+        const btn = document.getElementById("speakerBtn");
 
-      // Add styles to head
-      const styleSheet = document.createElement('style');
-      styleSheet.textContent = quickActionStyles;
-      document.head.appendChild(styleSheet);
+        if (state.autoSpeak) {
+          btn.style.background = "var(--primary-gradient)";
+          btn.style.color = "white";
+          showStatus("Auto-speak enabled", 2000);
+        } else {
+          btn.style.background = "rgba(118, 75, 162, 0.1)";
+          btn.style.color = "var(--secondary-color)";
+          showStatus("Auto-speak disabled", 2000);
+        }
+      }
 
-      // Override the original file upload handler to add quick actions
-      const originalHandleFileUpload = handleFileUpload;
-      handleFileUpload = async function(event) {
-        await originalHandleFileUpload(event);
-        
-        // Add quick analysis buttons after successful upload
-        setTimeout(() => {
-          addQuickAnalysisButtons();
-        }, 1000);
-      };
+      function toggleVoice() {
+        if (
+          !("webkitSpeechRecognition" in window) &&
+          !("SpeechRecognition" in window)
+        ) {
+          showStatus("Speech recognition not supported", 3000);
+          return;
+        }
 
-      // Add keyboard shortcuts
-      document.addEventListener('keydown', function(event) {
-        // Ctrl/Cmd + Enter to send message
-        if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+        if (state.isListening) {
+          stopListening();
+        } else {
+          startListening();
+        }
+      }
+
+      function startListening() {
+        const SpeechRecognition =
+          window.SpeechRecognition || window.webkitSpeechRecognition;
+        const recognition = new SpeechRecognition();
+
+        recognition.continuous = false;
+        recognition.interimResults = false;
+        recognition.lang = languages[state.currentLanguage].voice;
+
+        recognition.onstart = () => {
+          state.isListening = true;
+          document.getElementById("voiceBtn").classList.add("recording");
+          showStatus("Listening...", 0);
+        };
+
+        recognition.onresult = (event) => {
+          const transcript = event.results[0][0].transcript;
+          document.getElementById("chatInput").value = transcript;
+          showStatus("Voice input captured", 2000);
+        };
+
+        recognition.onerror = () => {
+          showStatus("Voice recognition error", 3000);
+          stopListening();
+        };
+
+        recognition.onend = () => {
+          stopListening();
+        };
+
+        recognition.start();
+      }
+
+      function stopListening() {
+        state.isListening = false;
+        document.getElementById("voiceBtn").classList.remove("recording");
+        showStatus("Listening stopped", 2000);
+      }
+
+      function handleKeyPress(event) {
+        if (event.key === "Enter" && !event.shiftKey) {
           event.preventDefault();
           sendMessage();
         }
-        
-        // Escape to stop speech
-        if (event.key === 'Escape' && speechSynthesis.speaking) {
-          speechSynthesis.cancel();
-          showAudioControls(false);
-        }
-        
-        // Ctrl/Cmd + U to upload files
-        if ((event.ctrlKey || event.metaKey) && event.key === 'u') {
-          event.preventDefault();
-          document.getElementById('fileInput').click();
-        }
-      });
-
-      // Add tooltips and help system
-      function initializeHelp() {
-        const helpButton = document.createElement('button');
-        helpButton.innerHTML = '❓';
-        helpButton.className = 'help-btn';
-        helpButton.style.cssText = `
-          position: fixed;
-          bottom: 20px;
-          left: 20px;
-          width: 50px;
-          height: 50px;
-          border-radius: 50%;
-          background: var(--primary-gradient);
-          color: white;
-          border: none;
-          cursor: pointer;
-          font-size: 1.2rem;
-          box-shadow: var(--shadow);
-          z-index: 1000;
-          transition: var(--transition);
-        `;
-        
-        helpButton.addEventListener('click', showHelp);
-        helpButton.addEventListener('mouseenter', function() {
-          this.style.transform = 'scale(1.1)';
-        });
-        helpButton.addEventListener('mouseleave', function() {
-          this.style.transform = 'scale(1)';
-        });
-        
-        document.body.appendChild(helpButton);
       }
 
-      function showHelp() {
-        const helpContent = `
-          <h3>🚀 Narrative AI Help</h3>
-          <div style="text-align: left; margin: 15px 0;">
-            <h4>Quick Start:</h4>
-            <ul>
-              <li>📎 Upload CSV files using the paperclip button</li>
-              <li>💬 Ask questions about your data</li>
-              <li>🎯 Switch between different business roles</li>
-              <li>🌐 Change language for multilingual support</li>
-            </ul>
-            
-            <h4>Keyboard Shortcuts:</h4>
-            <ul>
-              <li><kbd>Ctrl/Cmd + Enter</kbd> - Send message</li>
-              <li><kbd>Ctrl/Cmd + U</kbd> - Upload files</li>
-              <li><kbd>Escape</kbd> - Stop speech</li>
-            </ul>
-            
-            <h4>Features:</h4>
-            <ul>
-              <li>🎤 Voice input and 🔊 text-to-speech</li>
-              <li>📊 Automatic data visualization</li>
-              <li>💡 AI-powered business insights</li>
-              <li>📈 Quick analysis buttons</li>
-            </ul>
-          </div>
-        `;
-        
-        addMessage(helpContent, 'system');
-      }
+      function showTyping(show) {
+        const indicator = document.getElementById("typingIndicator");
+        indicator.style.display = show ? "block" : "none";
 
-      // Initialize help system
-      document.addEventListener('DOMContentLoaded', function() {
-        setTimeout(initializeHelp, 2000);
-      });
-
-      // Add auto-save functionality for conversation
-      function autoSaveConversation() {
-        const conversationData = {
-          timestamp: new Date().toISOString(),
-          role: currentRole,
-          language: currentLanguage,
-          history: conversationHistory
-        };
-        
-        try {
-          // Use in-memory storage since localStorage is not available
-          window.conversationBackup = conversationData;
-        } catch (error) {
-          console.log('Auto-save not available in this environment');
+        if (show) {
+          const chatContainer = document.getElementById("chatContainer");
+          chatContainer.scrollTop = chatContainer.scrollHeight;
         }
       }
 
-      // Save conversation every 30 seconds
-      setInterval(autoSaveConversation, 30000);
+      function showAudioControls(show) {
+        const controls = document.getElementById("audioControls");
+        controls.style.display = show ? "flex" : "none";
+      }
 
-      console.log('🎉 Narrative AI Frontend fully loaded and ready!');
+      function showStatus(message, duration) {
+        const indicator = document.getElementById("statusIndicator");
+        indicator.textContent = message;
+        indicator.style.display = "block";
+
+        if (duration > 0) {
+          setTimeout(() => {
+            indicator.style.display = "none";
+          }, duration);
+        }
+      }
+
+      // Export functions for file upload handling
+      function exportData() {
+        if (state.uploadedData.length === 0) {
+          showStatus("No data to export", 2000);
+          return;
+        }
+
+        const csv = Papa.unparse(state.uploadedData);
+        const blob = new Blob([csv], { type: "text/csv" });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "analyzed_data.csv";
+        a.click();
+        window.URL.revokeObjectURL(url);
+
+        showStatus("Data exported", 2000);
+      }
+
+      // Utility functions
+      function formatNumber(num) {
+        if (num >= 1000000) return (num / 1000000).toFixed(1) + "M";
+        if (num >= 1000) return (num / 1000).toFixed(1) + "K";
+        return num.toString();
+      }
+
+      function getRandomColor() {
+        const colors = [
+          "#667eea",
+          "#764ba2",
+          "#f093fb",
+          "#f5576c",
+          "#4facfe",
+          "#00f2fe",
+        ];
+        return colors[Math.floor(Math.random() * colors.length)];
+      }
     </script>
   </body>
 </html>

@@ -11,6 +11,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middleware
+
 app.use(cors({
   origin: ['http://localhost:3000', 'http://localhost:5500', 'http://127.0.0.1:5500'],
   credentials: true
@@ -155,6 +156,39 @@ function generateDataInsights(data) {
 }
 
 // Routes
+// Add this route BEFORE your existing routes in server.js
+// Add this after line 118 (after the sessions = new Map(); line)
+
+// Root route - Add this to fix 404 on localhost:3000
+app.get('/', (req, res) => {
+    res.json({
+      message: 'Narrative AI Backend Server',
+      status: 'Running',
+      version: '1.0.0',
+      endpoints: {
+        health: '/api/health',
+        chat: '/api/chat (POST)',
+        upload: '/api/upload (POST)',
+        analyze: '/api/analyze (POST)',
+        languages: '/api/languages'
+      },
+      documentation: 'Visit /api/health to check server status'
+    });
+  });
+  
+  // Add a catch-all for undefined API routes
+  app.get('/api/*', (req, res) => {
+    res.status(404).json({
+      error: 'API endpoint not found',
+      availableEndpoints: [
+        'GET /api/health',
+        'POST /api/chat',
+        'POST /api/upload',
+        'POST /api/analyze',
+        'GET /api/languages'
+      ]
+    });
+  });
 
 // Health check
 app.get('/api/health', (req, res) => {
