@@ -10,31 +10,87 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// CORS Configuration
-const allowedOrigins = process.env.NODE_ENV === 'production' 
-  ? [
-      'https://frontend-chatbot-flutterflow.vercel.app',
-      /^https:\/\/frontend-chatbot-flutterflow.*\.vercel\.app$/
-    ]
-  : [
-      'http://localhost:3000', 
-      'http://localhost:5500', 
-      'http://127.0.0.1:5500'
-    ];
+// Groq API configuration
+const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
+const GROQ_API_KEY = process.env.GROQ_API_KEY;
 
-// Add your frontend URL from environment variable if it exists
+if (!GROQ_API_KEY) {
+  console.error('ERROR: GROQ_API_KEY not found in environment variables');
+  process.exit(1);
+}
+
+// CORS Configuration - SIMPLIFIED AND MORE PERMISSIVE
+const allowedOrigins = [
+  'https://frontend-chatbot-flutterflow.vercel.app',
+  'https://frontend-chatbot-flutterflow-git-main-yourverceluser.vercel.app', // Replace with your actual Vercel user
+  'https://frontend-chatbot-flutterflow-git-main.vercel.app',
+  'https://frontend-chatbot-flutterflow.vercel.app',
+  'http://localhost:3000',
+  'http://localhost:5500',
+  'http://127.0.0.1:5500'
+];
+
+// Add custom frontend URL if provided
 if (process.env.FRONTEND_URL) {
   allowedOrigins.push(process.env.FRONTEND_URL);
 }
 
-// Middleware
+console.log('🌍 Allowed CORS Origins:', allowedOrigins);
+
+// CORS Configuration - More permissive for debugging
 app.use(cors({
-  origin: allowedOrigins,
+  origin: function (origin, callback) {
+    console.log('🔍 Request origin:', origin || 'no-origin');
+    
+    // Allow requests with no origin (mobile apps, Postman, curl, etc.)
+    if (!origin) {
+      console.log('✅ Allowing request with no origin');
+      return callback(null, true);
+    }
+    
+    // Check if origin is in allowed list or matches pattern
+    const isAllowed = allowedOrigins.some(allowedOrigin => {
+      return origin === allowedOrigin || 
+             origin.includes('vercel.app') || 
+             origin.includes('localhost');
+    });
+    
+    if (isAllowed) {
+      console.log('✅ CORS allowing origin:', origin);
+      callback(null, true);
+    } else {
+      console.log('❌ CORS rejecting origin:', origin);
+      console.log('🔍 Allowed origins:', allowedOrigins);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: [
+    'Content-Type', 
+    'Authorization', 
+    'X-Requested-With',
+    'Accept',
+    'Origin',
+    'Access-Control-Request-Method',
+    'Access-Control-Request-Headers'
+  ],
+  exposedHeaders: ['Content-Length', 'X-Kuma-Revision'],
+  optionsSuccessStatus: 200,
+  preflightContinue: false
 }));
 
+// Add explicit preflight handling
+app.options('*', (req, res) => {
+  console.log('🔄 Preflight request from:', req.headers.origin);
+  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS,PATCH');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.sendStatus(200);
+});
+
+// Basic middleware
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
@@ -66,15 +122,6 @@ const upload = multer({
   }
 });
 
-// Groq API configuration
-const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
-const GROQ_API_KEY = process.env.GROQ_API_KEY;
-
-if (!GROQ_API_KEY) {
-  console.error('ERROR: GROQ_API_KEY not found in environment variables');
-  process.exit(1);
-}
-
 // Language configurations
 const languages = {
   en: { name: 'English', voice: 'en-US' },
@@ -91,26 +138,21 @@ const languages = {
   hi: { name: 'Hindi', voice: 'hi-IN' }
 };
 
-// In-memory storage for session data (use Redis in production)
+// In-memory storage for session data
 const sessions = new Map();
 
-// Utility function to parse CSV file
+// Utility functions
 function parseCSVFile(filePath) {
   return new Promise((resolve, reject) => {
     const results = [];
     fs.createReadStream(filePath)
       .pipe(csv())
       .on('data', (data) => results.push(data))
-      .on('end', () => {
-        resolve(results);
-      })
-      .on('error', (error) => {
-        reject(error);
-      });
+      .on('end', () => resolve(results))
+      .on('error', (error) => reject(error));
   });
 }
 
-// Utility function to generate insights from data
 function generateDataInsights(data) {
   if (!data || data.length === 0) return [];
 
@@ -168,24 +210,51 @@ function generateDataInsights(data) {
     });
   });
 
-  return insights.slice(0, 5); // Return top 5 insights
+  return insights.slice(0, 5);
 }
 
 // ============ API ROUTES ============
 
-// Health check
+// Health check route with detailed logging
 app.get('/api/health', (req, res) => {
-  res.json({ 
-    status: 'OK', 
-    message: 'Server is running',
-    groqConnected: !!GROQ_API_KEY,
-    timestamp: new Date().toISOString()
-  });
+  try {
+    const origin = req.headers.origin || req.headers.referer || 'unknown';
+    console.log('🏥 Health check requested from:', origin);
+    console.log('🔍 Request headers:', JSON.stringify(req.headers, null, 2));
+    
+    const healthResponse = { 
+      status: 'OK', 
+      message: 'Server is running',
+      groqConnected: !!GROQ_API_KEY,
+      timestamp: new Date().toISOString(),
+      origin: origin,
+      cors: 'enabled',
+      server: 'Render',
+      version: '1.0.0'
+    };
+
+    console.log('✅ Sending health response:', healthResponse);
+    
+    // Set CORS headers explicitly
+    res.header('Access-Control-Allow-Origin', origin);
+    res.header('Access-Control-Allow-Credentials', 'true');
+    
+    res.status(200).json(healthResponse);
+  } catch (error) {
+    console.error('❌ Health check error:', error);
+    res.status(500).json({ 
+      status: 'ERROR', 
+      message: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
 });
 
 // Chat endpoint
 app.post('/api/chat', async (req, res) => {
   try {
+    console.log('💬 Chat request received from:', req.headers.origin);
+    
     const { 
       message, 
       role = 'ceo', 
@@ -222,9 +291,11 @@ Provide clear, actionable insights in the requested language. Be conversational,
     // Prepare messages for Groq API
     const messages = [
       { role: 'system', content: systemPrompt },
-      ...conversationHistory.slice(-6), // Keep last 6 messages for context
+      ...conversationHistory.slice(-6),
       { role: 'user', content: message }
     ];
+
+    console.log('🚀 Calling Groq API...');
 
     // Call Groq API
     const response = await fetch(GROQ_API_URL, {
@@ -244,12 +315,14 @@ Provide clear, actionable insights in the requested language. Be conversational,
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Groq API Error:', response.status, errorText);
+      console.error('❌ Groq API Error:', response.status, errorText);
       throw new Error(`Groq API Error: ${response.status}`);
     }
 
     const data = await response.json();
     const aiResponse = data.choices[0].message.content;
+
+    console.log('✅ Chat response generated successfully');
 
     res.json({
       response: aiResponse,
@@ -258,7 +331,7 @@ Provide clear, actionable insights in the requested language. Be conversational,
     });
 
   } catch (error) {
-    console.error('Chat API Error:', error);
+    console.error('❌ Chat API Error:', error);
     res.status(500).json({ 
       error: 'Failed to process chat request',
       details: error.message 
@@ -269,6 +342,8 @@ Provide clear, actionable insights in the requested language. Be conversational,
 // File upload endpoint
 app.post('/api/upload', upload.array('files', 10), async (req, res) => {
   try {
+    console.log('📁 File upload request from:', req.headers.origin);
+    
     if (!req.files || req.files.length === 0) {
       return res.status(400).json({ error: 'No files uploaded' });
     }
@@ -284,7 +359,7 @@ app.post('/api/upload', upload.array('files', 10), async (req, res) => {
           filename: file.originalname,
           recordCount: data.length,
           columns: Object.keys(data[0] || {}),
-          data: data.slice(0, 100), // Return first 100 rows for preview
+          data: data.slice(0, 100),
           insights: insights,
           success: true
         });
@@ -293,7 +368,7 @@ app.post('/api/upload', upload.array('files', 10), async (req, res) => {
         fs.unlinkSync(file.path);
         
       } catch (parseError) {
-        console.error(`Error parsing ${file.originalname}:`, parseError);
+        console.error(`❌ Error parsing ${file.originalname}:`, parseError);
         results.push({
           filename: file.originalname,
           error: parseError.message,
@@ -302,10 +377,11 @@ app.post('/api/upload', upload.array('files', 10), async (req, res) => {
       }
     }
 
+    console.log('✅ File upload processed successfully');
     res.json({ results });
 
   } catch (error) {
-    console.error('Upload API Error:', error);
+    console.error('❌ Upload API Error:', error);
     res.status(500).json({ 
       error: 'Failed to process file upload',
       details: error.message 
@@ -316,6 +392,8 @@ app.post('/api/upload', upload.array('files', 10), async (req, res) => {
 // Data analysis endpoint
 app.post('/api/analyze', async (req, res) => {
   try {
+    console.log('📊 Analysis request from:', req.headers.origin);
+    
     const { data, role = 'ceo', language = 'en', analysisType = 'general' } = req.body;
 
     if (!data || !Array.isArray(data) || data.length === 0) {
@@ -352,12 +430,9 @@ app.post('/api/analyze', async (req, res) => {
     const prompt = `${analysisPrompts[analysisType] || analysisPrompts.general} for this business data: ${dataContext}. 
     Provide actionable insights from a ${role} perspective in ${languages[language]?.name || 'English'}.`;
 
-    // For production, use the deployed URL; for development, use localhost
-    const baseURL = process.env.NODE_ENV === 'production' 
-      ? process.env.RENDER_EXTERNAL_URL || `https://backend-chatbot-flutterflow.onrender.com`
-      : `http://localhost:${PORT}`;
-
     // Call chat endpoint internally
+    const baseURL = `http://localhost:${PORT}`;
+
     const chatResponse = await fetch(`${baseURL}/api/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -377,6 +452,8 @@ app.post('/api/analyze', async (req, res) => {
     const analysisResult = await chatResponse.json();
     const insights = generateDataInsights(data);
 
+    console.log('✅ Analysis completed successfully');
+
     res.json({
       analysis: analysisResult.response,
       insights: insights,
@@ -389,7 +466,7 @@ app.post('/api/analyze', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Analysis API Error:', error);
+    console.error('❌ Analysis API Error:', error);
     res.status(500).json({ 
       error: 'Failed to analyze data',
       details: error.message 
@@ -399,6 +476,7 @@ app.post('/api/analyze', async (req, res) => {
 
 // Get supported languages
 app.get('/api/languages', (req, res) => {
+  console.log('🌐 Languages request from:', req.headers.origin);
   res.json({ languages });
 });
 
@@ -407,7 +485,7 @@ app.get('/api/languages', (req, res) => {
 // Serve static files from public directory
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Root route - serve index.html if it exists
+// Root route
 app.get('/', (req, res) => {
   const indexPath = path.join(__dirname, 'public', 'index.html');
   if (fs.existsSync(indexPath)) {
@@ -416,6 +494,7 @@ app.get('/', (req, res) => {
     res.json({
       message: 'Narrative AI Server Running',
       status: 'OK',
+      timestamp: new Date().toISOString(),
       availableEndpoints: [
         'GET /api/health',
         'POST /api/chat',
@@ -429,6 +508,7 @@ app.get('/', (req, res) => {
 
 // Catch-all for undefined API routes
 app.all('/api/*', (req, res) => {
+  console.log('❓ Unknown API route requested:', req.method, req.path);
   res.status(404).json({
     error: 'API endpoint not found',
     method: req.method,
@@ -443,7 +523,7 @@ app.all('/api/*', (req, res) => {
   });
 });
 
-// Catch-all for any other routes - serve index.html for SPA
+// Catch-all for any other routes
 app.get('*', (req, res) => {
   const indexPath = path.join(__dirname, 'public', 'index.html');
   if (fs.existsSync(indexPath)) {
@@ -451,14 +531,26 @@ app.get('*', (req, res) => {
   } else {
     res.status(404).json({
       error: 'Page not found',
-      message: 'No static files found. Make sure your public directory contains index.html'
+      message: 'No static files found. Make sure your public directory contains index.html',
+      path: req.path
     });
   }
 });
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error('Server Error:', err);
+  console.error('❌ Server Error:', err);
+  
+  // CORS error handling
+  if (err.message === 'Not allowed by CORS') {
+    console.log('🚫 CORS Error - Origin:', req.headers.origin);
+    console.log('🔍 Allowed Origins:', allowedOrigins);
+    return res.status(403).json({ 
+      error: 'CORS policy violation',
+      origin: req.headers.origin,
+      allowedOrigins: allowedOrigins
+    });
+  }
   
   if (err instanceof multer.MulterError) {
     if (err.code === 'LIMIT_FILE_SIZE') {
@@ -473,23 +565,25 @@ app.use((err, req, res, next) => {
 });
 
 // Start server
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
+  console.log(`🚀 Server also accessible on http://0.0.0.0:${PORT}`);
   console.log(`📊 Groq API Key: ${GROQ_API_KEY ? '✅ Configured' : '❌ Missing'}`);
   console.log(`🌍 CORS Origins:`, allowedOrigins);
   console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
   
-  // Create uploads directory if it doesn't exist
+  // Create directories
   const uploadsDir = path.join(__dirname, 'uploads');
   if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir, { recursive: true });
     console.log(`📁 Created uploads directory: ${uploadsDir}`);
   }
 
-  // Create public directory if it doesn't exist
   const publicDir = path.join(__dirname, 'public');
   if (!fs.existsSync(publicDir)) {
     fs.mkdirSync(publicDir, { recursive: true });
     console.log(`📁 Created public directory: ${publicDir}`);
   }
+
+  console.log('🎯 Server is ready to accept connections!');
 });
