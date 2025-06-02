@@ -65,6 +65,28 @@
         -webkit-text-fill-color: transparent;
       }
 
+      .connection-status {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background: rgba(255, 255, 255, 0.9);
+        border-radius: 15px;
+        padding: 10px 15px;
+        border: 1px solid #e0e0e0;
+      }
+
+      .status-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #dc3545;
+        animation: pulse 2s infinite;
+      }
+
+      .status-dot.connected {
+        background: #28a745;
+      }
+
       .language-selector {
         display: flex;
         align-items: center;
@@ -168,6 +190,15 @@
         margin: 10px 0;
       }
 
+      .message.error {
+        background: rgba(220, 53, 69, 0.1);
+        border: 1px solid rgba(220, 53, 69, 0.3);
+        color: #721c24;
+        text-align: center;
+        max-width: 100%;
+        margin: 10px 0;
+      }
+
       .message-actions {
         position: absolute;
         top: 5px;
@@ -238,6 +269,11 @@
         background: var(--primary-gradient);
         color: white;
         padding: 12px 16px;
+      }
+
+      .send-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
       }
 
       .voice-btn,
@@ -443,24 +479,30 @@
         <div class="header-top">
           <div>
             <h1>🤖 Enhanced Narrative AI</h1>
-            <p>Intelligent business analyst with multilingual support</p>
+            <p>Intelligent business analyst with backend integration</p>
           </div>
-          <div class="language-selector">
-            <span>🌍</span>
-            <select id="languageSelect" onchange="changeLanguage()">
-              <option value="en">English</option>
-              <option value="es">Español</option>
-              <option value="fr">Français</option>
-              <option value="de">Deutsch</option>
-              <option value="it">Italiano</option>
-              <option value="pt">Português</option>
-              <option value="ru">Русский</option>
-              <option value="zh">中文</option>
-              <option value="ja">日本語</option>
-              <option value="ko">한국어</option>
-              <option value="ar">العربية</option>
-              <option value="hi">हिंदी</option>
-            </select>
+          <div style="display: flex; gap: 15px; align-items: center;">
+            <div class="connection-status">
+              <div class="status-dot" id="statusDot"></div>
+              <span id="connectionStatus">Connecting...</span>
+            </div>
+            <div class="language-selector">
+              <span>🌍</span>
+              <select id="languageSelect" onchange="changeLanguage()">
+                <option value="en">English</option>
+                <option value="es">Español</option>
+                <option value="fr">Français</option>
+                <option value="de">Deutsch</option>
+                <option value="it">Italiano</option>
+                <option value="pt">Português</option>
+                <option value="ru">Русский</option>
+                <option value="zh">中文</option>
+                <option value="ja">日本語</option>
+                <option value="ko">한국어</option>
+                <option value="ar">العربية</option>
+                <option value="hi">हिंदी</option>
+              </select>
+            </div>
           </div>
         </div>
 
@@ -496,8 +538,7 @@
               <div class="insight-card">
                 <strong>🚀 Getting Started</strong>
                 <p>
-                  Upload data, ask questions, or explore insights in your
-                  preferred language.
+                  Upload data, ask questions, or explore insights. Backend integration ready!
                 </p>
               </div>
             </div>
@@ -508,10 +549,7 @@
           <h3>💬 Chat with Narrative AI</h3>
           <div class="chat-container" id="chatContainer">
             <div class="message ai">
-              <strong>Narrative AI:</strong> Hello! I'm your multilingual
-              business analyst. I can help with data analysis, insights, and
-              strategy in your preferred language. Upload CSV files or ask
-              questions to get started!
+              <strong>Narrative AI:</strong> Hello! I'm your intelligent business analyst, now connected to a powerful backend. I can help with data analysis, insights, and strategy. Upload CSV files or ask questions to get started!
               <div class="message-actions">
                 <button
                   class="action-btn"
@@ -571,7 +609,7 @@
             >
               🔊
             </button>
-            <button class="send-btn" onclick="sendMessage()">Send</button>
+            <button class="send-btn" onclick="sendMessage()" id="sendBtn">Send</button>
           </div>
         </div>
       </div>
@@ -588,12 +626,13 @@
     <div class="status-indicator" id="statusIndicator"></div>
 
     <script>
-      // Configuration
-      const GROQ_API_KEY =
-        "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";
-      const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
-      const MODEL = "llama3-8b-8192";
-
+      // Configuration - Updated to match your backend endpoints
+      const BACKEND_URL = "https://backend-chatbot-flutterflow.onrender.com";
+      const HEALTH_ENDPOINT = "/api/health";
+      const CHAT_ENDPOINT = "/api/chat";
+      const UPLOAD_ENDPOINT = "/api/upload";
+      const ANALYZE_ENDPOINT = "/api/analyze";
+      
       // State management
       const state = {
         currentRole: "ceo",
@@ -606,6 +645,8 @@
         conversationHistory: [],
         speechSynthesis: window.speechSynthesis,
         currentUtterance: null,
+        backendConnected: false,
+        sessionId: null,
       };
 
       // Language configurations
@@ -627,10 +668,11 @@
       // Initialize application
       document.addEventListener("DOMContentLoaded", init);
 
-      function init() {
+      async function init() {
         setupEventListeners();
         createDefaultChart();
-        showStatus("Ready", 2000);
+        await checkBackendConnection();
+        generateSessionId();
       }
 
       function setupEventListeners() {
@@ -643,6 +685,50 @@
           if (e.ctrlKey && e.key === "Enter") sendMessage();
           if (e.key === "Escape") stopSpeech();
         });
+      }
+
+      function generateSessionId() {
+        state.sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+      }
+
+      async function checkBackendConnection() {
+        try {
+          updateConnectionStatus("Connecting...", false);
+          
+          const response = await fetch(`${BACKEND_URL}${HEALTH_ENDPOINT}`, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            state.backendConnected = true;
+            updateConnectionStatus("Connected", true);
+            showStatus("Backend connected successfully", 3000);
+            console.log('Backend status:', data);
+          } else {
+            throw new Error(`Backend returned ${response.status}`);
+          }
+        } catch (error) {
+          state.backendConnected = false;
+          updateConnectionStatus("Disconnected", false);
+          showStatus("Backend connection failed", 5000);
+          console.error('Backend connection error:', error);
+        }
+      }
+
+      function updateConnectionStatus(message, connected) {
+        const statusDot = document.getElementById("statusDot");
+        const statusText = document.getElementById("connectionStatus");
+        
+        statusText.textContent = message;
+        if (connected) {
+          statusDot.classList.add("connected");
+        } else {
+          statusDot.classList.remove("connected");
+        }
       }
 
       function selectRole(role) {
@@ -668,14 +754,10 @@
           `Language changed to ${languages[state.currentLanguage].name}`,
           2000
         );
-
-        // Update UI text based on language
         updateUILanguage();
       }
 
       function updateUILanguage() {
-        // This would typically involve loading translation files
-        // For now, we'll just show a confirmation
         const langName = languages[state.currentLanguage].name;
         addMessage(
           "system",
@@ -687,59 +769,93 @@
         const files = Array.from(e.target.files);
         showStatus("Processing files...", 0);
 
-        for (const file of files) {
+        // Use backend upload endpoint
+        const formData = new FormData();
+        files.forEach(file => {
           if (file.name.endsWith(".csv")) {
-            try {
-              const data = await parseCSV(file);
-              state.uploadedData = state.uploadedData.concat(data);
-              addMessage(
-                "system",
-                `✅ ${file.name} uploaded (${data.length} records)`
-              );
-            } catch (error) {
-              addMessage(
-                "system",
-                `❌ Error with ${file.name}: ${error.message}`
-              );
+            formData.append('files', file);
+          }
+        });
+
+        try {
+          const response = await fetch(`${BACKEND_URL}${UPLOAD_ENDPOINT}`, {
+            method: 'POST',
+            body: formData
+          });
+
+          if (!response.ok) {
+            throw new Error(`Upload failed: ${response.status}`);
+          }
+
+          const result = await response.json();
+          
+          if (result.results && result.results.length > 0) {
+            result.results.forEach(fileResult => {
+              if (fileResult.success) {
+                state.uploadedData = state.uploadedData.concat(fileResult.data);
+                addMessage("system", `✅ ${fileResult.filename} uploaded (${fileResult.recordCount} records)`);
+                
+                // Update insights if available
+                if (fileResult.insights) {
+                  updateInsights(fileResult.insights);
+                }
+              } else {
+                addMessage("error", `❌ Error with ${fileResult.filename}: ${fileResult.error}`);
+              }
+            });
+
+            if (state.uploadedData.length > 0) {
+              analyzeUploadedData();
             }
           }
+
+          showStatus("Files processed", 2000);
+        } catch (error) {
+          console.error('File upload error:', error);
+          addMessage("error", `❌ Upload failed: ${error.message}`);
+          showStatus("Upload failed", 3000);
         }
 
-        if (state.uploadedData.length > 0) {
-          analyzeData();
-        }
-
-        showStatus("Files processed", 2000);
         e.target.value = "";
       }
 
-      function parseCSV(file) {
-        return new Promise((resolve, reject) => {
-          Papa.parse(file, {
-            header: true,
-            skipEmptyLines: true,
-            dynamicTyping: true,
-            complete: (results) => {
-              if (results.errors.length > 0) {
-                reject(new Error(results.errors[0].message));
-              } else {
-                resolve(results.data);
-              }
-            },
-          });
-        });
-      }
-
-      function analyzeData() {
+      async function analyzeUploadedData() {
         generateStats();
         createChart();
 
-        const prompt = `Analyze this business data in ${
-          languages[state.currentLanguage].name
-        }: ${state.uploadedData.length} records with columns: ${Object.keys(
-          state.uploadedData[0]
-        ).join(", ")}. Provide ${state.currentRole}-focused insights.`;
-        sendToGroqAPI(prompt, true);
+        const prompt = `I've uploaded business data with ${state.uploadedData.length} records. Please provide ${state.currentRole}-focused insights in ${languages[state.currentLanguage].name}.`;
+        
+        // Use the analyze endpoint for uploaded data
+        try {
+          const response = await fetch(`${BACKEND_URL}${ANALYZE_ENDPOINT}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              data: state.uploadedData,
+              role: state.currentRole,
+              language: state.currentLanguage,
+              analysisType: 'general'
+            })
+          });
+
+          if (response.ok) {
+            const analysisResult = await response.json();
+            addMessage("ai", analysisResult.analysis);
+            
+            if (analysisResult.insights) {
+              updateInsights(analysisResult.insights);
+            }
+          } else {
+            // Fallback to regular chat
+            await sendToBackend(prompt, true);
+          }
+        } catch (error) {
+          console.error('Analysis error:', error);
+          // Fallback to regular chat
+          await sendToBackend(prompt, true);
+        }
       }
 
       function generateStats() {
@@ -856,210 +972,158 @@
         createChart();
       }
 
-      async function sendToGroqAPI(message, isDataAnalysis = false) {
+      async function sendMessage(message = null) {
+        const input = document.getElementById("chatInput");
+        const text = message || input.value.trim();
+
+        if (!text) return;
+
+        // Clear input
+        input.value = "";
+
+        // Add user message
+        addMessage("user", text);
+
+        // Show typing indicator
         showTyping(true);
-        showStatus("Thinking...", 0);
-
-        const systemPrompt = `You are Narrative AI, a multilingual business analyst. Always respond in ${
-          languages[state.currentLanguage].name
-        } language.
-
-Current context:
-- User role: ${state.currentRole.toUpperCase()}
-- Language: ${languages[state.currentLanguage].name}
-- Data available: ${state.uploadedData.length > 0 ? "Yes" : "No"}
-
-Role focus:
-- CEO: Strategic insights, growth, ROI
-- Marketer: Campaigns, conversions, traffic
-- Product: Features, engagement, usability
-- Analyst: Detailed metrics, statistical analysis
-
-Provide clear, actionable insights in the requested language. Be conversational and professional.`;
-
-        const userMessage = { role: "user", content: message };
-        state.conversationHistory.push(userMessage);
 
         try {
-          const response = await fetch(GROQ_API_URL, {
-            method: "POST",
+          if (state.backendConnected) {
+            await sendToBackend(text);
+          } else {
+            // Fallback response when backend is disconnected
+            setTimeout(() => {
+              showTyping(false);
+              addMessage("ai", "I'm currently disconnected from the backend. Please check the connection and try again.");
+            }, 1000);
+          }
+        } catch (error) {
+          showTyping(false);
+          addMessage("error", "Failed to get response. Please try again.");
+          console.error("Send message error:", error);
+        }
+      }
+
+      async function sendToBackend(message, isAutoAnalysis = false) {
+        try {
+          const payload = {
+            message: message,
+            role: state.currentRole,
+            language: state.currentLanguage,
+            sessionId: state.sessionId,
+            conversationHistory: state.conversationHistory.slice(-10), // Last 10 messages for context
+            hasData: state.uploadedData.length > 0,
+            dataContext: state.uploadedData.length > 0 ? {
+              recordCount: state.uploadedData.length,
+              columns: state.uploadedData.length > 0 ? Object.keys(state.uploadedData[0]) : [],
+              sampleData: state.uploadedData.slice(0, 3)
+            } : null
+          };
+
+          const response = await fetch(`${BACKEND_URL}${CHAT_ENDPOINT}`, {
+            method: 'POST',
             headers: {
-              Authorization: `Bearer ${GROQ_API_KEY}`,
-              "Content-Type": "application/json",
+              'Content-Type': 'application/json',
             },
-            body: JSON.stringify({
-              model: MODEL,
-              messages: [
-                { role: "system", content: systemPrompt },
-                ...state.conversationHistory.slice(-8),
-              ],
-              max_tokens: 1000,
-              temperature: 0.7,
-            }),
+            body: JSON.stringify(payload)
           });
 
+          showTyping(false);
+
           if (!response.ok) {
-            throw new Error(`API Error: ${response.status}`);
+            throw new Error(`Backend error: ${response.status}`);
           }
 
           const data = await response.json();
-          const aiResponse = data.choices[0].message.content;
+          
+          if (data.response) {
+            addMessage("ai", data.response);
+            
+            // Update conversation history
+            state.conversationHistory.push(
+              { role: "user", content: message },
+              { role: "assistant", content: data.response }
+            );
 
-          state.conversationHistory.push({
-            role: "assistant",
-            content: aiResponse,
-          });
+            // Handle additional data if provided
+            if (data.insights) {
+              updateInsights(data.insights);
+            }
 
-          showTyping(false);
-          addMessage("ai", aiResponse);
+            if (data.chartData) {
+              updateChart(data.chartData);
+            }
 
-          if (state.autoSpeak) {
-            speakText(aiResponse);
+            if (data.stats) {
+              updateStats(data.stats);
+            }
+
+            // Auto-speak if enabled
+            if (state.autoSpeak && !isAutoAnalysis) {
+              speakText(data.response);
+            }
+          } else {
+            addMessage("error", "Received empty response from backend");
           }
 
-          if (isDataAnalysis) {
-            updateInsights(aiResponse);
-          }
-
-          showStatus("Response received", 2000);
         } catch (error) {
           showTyping(false);
-          showStatus("Error occurred", 3000);
-
-          let errorMsg = "I apologize, but I'm having connectivity issues. ";
-          if (error.message.includes("401"))
-            errorMsg += "Authentication problem detected.";
-          else if (error.message.includes("429"))
-            errorMsg += "Rate limit reached, please wait.";
-          else errorMsg += "Please try again in a moment.";
-
-          addMessage("ai", errorMsg);
+          console.error('Backend communication error:', error);
+          addMessage("error", `Communication error: ${error.message}`);
         }
       }
 
-      function updateInsights(response) {
-        const insights = response
-          .split(/[.!?]/)
-          .filter((s) => s.trim().length > 20)
-          .slice(0, 3);
-
-        document.getElementById("insightsList").innerHTML = insights
-          .map(
-            (insight, i) => `
-                <div class="insight-card">
-                    <strong>💡 Insight ${i + 1}</strong>
-                    <p>${insight.trim()}</p>
-                </div>
-            `
-          )
-          .join("");
-      }
-
-      function addMessage(sender, message) {
-        const chatContainer = document.getElementById("chatContainer");
+      function addMessage(type, content) {
+        const container = document.getElementById("chatContainer");
         const messageDiv = document.createElement("div");
-        messageDiv.className = `message ${sender}`;
+        messageDiv.className = `message ${type}`;
 
-        let content = "";
-        if (sender === "ai") {
-          content = `<strong>Narrative AI:</strong> ${message}`;
-          content += `<div class="message-actions">
-                    <button class="action-btn" onclick="speakMessage(this)" title="Speak">🔊</button>
-                </div>`;
-        } else if (sender === "system") {
-          content = message;
-        } else {
-          content = message;
+        let displayContent = content;
+        if (type === "ai") {
+          displayContent = `<strong>Narrative AI:</strong> ${content}`;
+        } else if (type === "user") {
+          displayContent = `<strong>You:</strong> ${content}`;
         }
 
-        messageDiv.innerHTML = content;
-        chatContainer.appendChild(messageDiv);
-        chatContainer.scrollTop = chatContainer.scrollHeight;
+        messageDiv.innerHTML = `
+          ${displayContent}
+          ${type !== "system" && type !== "error" ? `
+            <div class="message-actions">
+              <button class="action-btn" onclick="copyMessage(this)" title="Copy">📋</button>
+              ${type === "ai" ? `<button class="action-btn" onclick="speakMessage(this)" title="Speak">🔊</button>` : ""}
+            </div>
+          ` : ""}
+        `;
+
+        container.appendChild(messageDiv);
+        container.scrollTop = container.scrollHeight;
+
+        // Add fade-in animation
+        setTimeout(() => messageDiv.style.opacity = "1", 10);
       }
 
-      function sendMessage() {
-        const input = document.getElementById("chatInput");
-        const message = input.value.trim();
-
-        if (!message) return;
-
-        addMessage("user", message);
-        input.value = "";
-
-        sendToGroqAPI(message);
-      }
-
-      function speakMessage(button) {
-        const messageText = button
-          .closest(".message")
-          .textContent.replace("Narrative AI:", "")
-          .trim();
-        speakText(messageText);
-      }
-
-      function speakText(text) {
-        if (state.isSpeaking) {
-          stopSpeech();
-        }
-
-        const utterance = new SpeechSynthesisUtterance(text);
-        const voices = state.speechSynthesis.getVoices();
-        const targetLang = languages[state.currentLanguage].voice;
-
-        const voice =
-          voices.find((v) => v.lang.startsWith(targetLang.split("-")[0])) ||
-          voices[0];
-        if (voice) utterance.voice = voice;
-
-        utterance.rate = 0.9;
-        utterance.pitch = 1.0;
-        utterance.volume = 0.8;
-
-        utterance.onstart = () => {
-          state.isSpeaking = true;
-          document.getElementById("speakerBtn").classList.add("speaking");
-          showAudioControls(true);
-        };
-
-        utterance.onend = () => {
-          state.isSpeaking = false;
-          document.getElementById("speakerBtn").classList.remove("speaking");
-          showAudioControls(false);
-        };
-
-        state.currentUtterance = utterance;
-        state.speechSynthesis.speak(utterance);
-      }
-
-      function stopSpeech() {
-        if (state.speechSynthesis.speaking) {
-          state.speechSynthesis.cancel();
-        }
-        state.isSpeaking = false;
-        document.getElementById("speakerBtn").classList.remove("speaking");
-        showAudioControls(false);
-      }
-
-      function toggleAutoSpeak() {
-        state.autoSpeak = !state.autoSpeak;
-        const btn = document.getElementById("speakerBtn");
-
-        if (state.autoSpeak) {
-          btn.style.background = "var(--primary-gradient)";
-          btn.style.color = "white";
-          showStatus("Auto-speak enabled", 2000);
-        } else {
-          btn.style.background = "rgba(118, 75, 162, 0.1)";
-          btn.style.color = "var(--secondary-color)";
-          showStatus("Auto-speak disabled", 2000);
+      function showTyping(show) {
+        const indicator = document.getElementById("typingIndicator");
+        indicator.style.display = show ? "block" : "none";
+        
+        if (show) {
+          const container = document.getElementById("chatContainer");
+          container.scrollTop = container.scrollHeight;
         }
       }
 
+      function handleKeyPress(event) {
+        if (event.key === "Enter" && !event.shiftKey) {
+          event.preventDefault();
+          sendMessage();
+        }
+      }
+
+      // Voice functionality
       function toggleVoice() {
-        if (
-          !("webkitSpeechRecognition" in window) &&
-          !("SpeechRecognition" in window)
-        ) {
+        const btn = document.getElementById("voiceBtn");
+        
+        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
           showStatus("Speech recognition not supported", 3000);
           return;
         }
@@ -1072,10 +1136,9 @@ Provide clear, actionable insights in the requested language. Be conversational 
       }
 
       function startListening() {
-        const SpeechRecognition =
-          window.SpeechRecognition || window.webkitSpeechRecognition;
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         const recognition = new SpeechRecognition();
-
+        
         recognition.continuous = false;
         recognition.interimResults = false;
         recognition.lang = languages[state.currentLanguage].voice;
@@ -1092,8 +1155,9 @@ Provide clear, actionable insights in the requested language. Be conversational 
           showStatus("Voice input captured", 2000);
         };
 
-        recognition.onerror = () => {
-          showStatus("Voice recognition error", 3000);
+        recognition.onerror = (event) => {
+          console.error("Speech recognition error:", event.error);
+          showStatus(`Voice error: ${event.error}`, 3000);
           stopListening();
         };
 
@@ -1102,29 +1166,71 @@ Provide clear, actionable insights in the requested language. Be conversational 
         };
 
         recognition.start();
+        state.recognition = recognition;
       }
 
       function stopListening() {
+        if (state.recognition) {
+          state.recognition.stop();
+        }
         state.isListening = false;
         document.getElementById("voiceBtn").classList.remove("recording");
-        showStatus("Listening stopped", 2000);
+        showStatus("", 0);
       }
 
-      function handleKeyPress(event) {
-        if (event.key === "Enter" && !event.shiftKey) {
-          event.preventDefault();
-          sendMessage();
-        }
+      // Speech synthesis
+      function toggleAutoSpeak() {
+        state.autoSpeak = !state.autoSpeak;
+        const btn = document.getElementById("speakerBtn");
+        btn.classList.toggle("speaking", state.autoSpeak);
+        showStatus(`Auto-speak ${state.autoSpeak ? "enabled" : "disabled"}`, 2000);
       }
 
-      function showTyping(show) {
-        const indicator = document.getElementById("typingIndicator");
-        indicator.style.display = show ? "block" : "none";
+      function speakMessage(button) {
+        const messageText = button.closest(".message").textContent.replace(/^(Narrative AI:|You:)/, "").trim();
+        speakText(messageText);
+      }
 
-        if (show) {
-          const chatContainer = document.getElementById("chatContainer");
-          chatContainer.scrollTop = chatContainer.scrollHeight;
+      function speakText(text) {
+        if (state.isSpeaking) {
+          stopSpeech();
         }
+
+        if (!text || text.trim() === "") return;
+
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = languages[state.currentLanguage].voice;
+        utterance.rate = 0.9;
+        utterance.pitch = 1;
+
+        utterance.onstart = () => {
+          state.isSpeaking = true;
+          state.currentUtterance = utterance;
+          showAudioControls(true);
+        };
+
+        utterance.onend = () => {
+          state.isSpeaking = false;
+          state.currentUtterance = null;
+          showAudioControls(false);
+        };
+
+        utterance.onerror = (event) => {
+          console.error("Speech synthesis error:", event);
+          state.isSpeaking = false;
+          showAudioControls(false);
+        };
+
+        state.speechSynthesis.speak(utterance);
+      }
+
+      function stopSpeech() {
+        if (state.speechSynthesis.speaking) {
+          state.speechSynthesis.cancel();
+        }
+        state.isSpeaking = false;
+        state.currentUtterance = null;
+        showAudioControls(false);
       }
 
       function showAudioControls(show) {
@@ -1132,8 +1238,23 @@ Provide clear, actionable insights in the requested language. Be conversational 
         controls.style.display = show ? "flex" : "none";
       }
 
+      // Utility functions
+      function copyMessage(button) {
+        const messageText = button.closest(".message").textContent.replace(/^(Narrative AI:|You:)/, "").trim();
+        navigator.clipboard.writeText(messageText).then(() => {
+          showStatus("Message copied!", 2000);
+        }).catch(() => {
+          showStatus("Copy failed", 2000);
+        });
+      }
+
       function showStatus(message, duration) {
         const indicator = document.getElementById("statusIndicator");
+        if (!message) {
+          indicator.style.display = "none";
+          return;
+        }
+
         indicator.textContent = message;
         indicator.style.display = "block";
 
@@ -1144,43 +1265,98 @@ Provide clear, actionable insights in the requested language. Be conversational 
         }
       }
 
-      // Export functions for file upload handling
-      function exportData() {
-        if (state.uploadedData.length === 0) {
-          showStatus("No data to export", 2000);
-          return;
+      function updateInsights(insights) {
+        const insightsList = document.getElementById("insightsList");
+        
+        if (Array.isArray(insights)) {
+          insightsList.innerHTML = insights.map(insight => `
+            <div class="insight-card">
+              <strong>${insight.title || "💡 Insight"}</strong>
+              <p>${insight.description || insight}</p>
+            </div>
+          `).join("");
+        } else if (typeof insights === "string") {
+          insightsList.innerHTML = `
+            <div class="insight-card">
+              <strong>💡 Analysis</strong>
+              <p>${insights}</p>
+            </div>
+          `;
+        } else {
+          insightsList.innerHTML = `
+            <div class="insight-card">
+              <strong>📊 Current Data</strong>
+              <p>Insights will appear here as you interact with your data.</p>
+            </div>
+          `;
         }
-
-        const csv = Papa.unparse(state.uploadedData);
-        const blob = new Blob([csv], { type: "text/csv" });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = "analyzed_data.csv";
-        a.click();
-        window.URL.revokeObjectURL(url);
-
-        showStatus("Data exported", 2000);
       }
 
-      // Utility functions
-      function formatNumber(num) {
-        if (num >= 1000000) return (num / 1000000).toFixed(1) + "M";
-        if (num >= 1000) return (num / 1000).toFixed(1) + "K";
-        return num.toString();
+      function updateChart(chartData) {
+        if (!chartData || !state.chart) return;
+
+        try {
+          state.chart.data.labels = chartData.labels || state.chart.data.labels;
+          state.chart.data.datasets[0].data = chartData.data || chartData.values || state.chart.data.datasets[0].data;
+          state.chart.data.datasets[0].label = chartData.label || state.chart.data.datasets[0].label;
+          state.chart.update();
+        } catch (error) {
+          console.error("Chart update error:", error);
+        }
       }
 
-      function getRandomColor() {
-        const colors = [
-          "#667eea",
-          "#764ba2",
-          "#f093fb",
-          "#f5576c",
-          "#4facfe",
-          "#00f2fe",
-        ];
-        return colors[Math.floor(Math.random() * colors.length)];
+      function updateStats(stats) {
+        if (!stats || !Array.isArray(stats)) return;
+
+        const statsGrid = document.getElementById("statsGrid");
+        statsGrid.innerHTML = stats.map(stat => `
+          <div class="stat-card">
+            <div class="stat-value">${stat.value}</div>
+            <div class="stat-label">${stat.label}</div>
+          </div>
+        `).join("");
+        
+        statsGrid.style.display = "grid";
       }
+
+      // Periodic connection check
+      setInterval(async () => {
+        if (!state.backendConnected) {
+          await checkBackendConnection();
+        }
+      }, 30000); // Check every 30 seconds
+
+      // Handle page visibility changes
+      document.addEventListener("visibilitychange", () => {
+        if (document.hidden) {
+          stopSpeech();
+          stopListening();
+        }
+      });
+
+      // Cleanup on page unload
+      window.addEventListener("beforeunload", () => {
+        stopSpeech();
+        stopListening();
+      });
+
+      // Error handling for uncaught errors
+      window.addEventListener("error", (event) => {
+        console.error("Global error:", event.error);
+        showStatus("An error occurred", 3000);
+      });
+
+      // Handle online/offline status
+      window.addEventListener("online", async () => {
+        showStatus("Connection restored", 3000);
+        await checkBackendConnection();
+      });
+
+      window.addEventListener("offline", () => {
+        state.backendConnected = false;
+        updateConnectionStatus("Offline", false);
+        showStatus("Connection lost", 3000);
+      });
     </script>
   </body>
 </html>
