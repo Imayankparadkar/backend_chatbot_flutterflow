@@ -11,10 +11,17 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middleware
-app.use(cors({
-  origin: ['http://localhost:3000', 'http://localhost:5500', 'http://127.0.0.1:5500'],
-  credentials: true
-}));
+const allowedOrigins = process.env.NODE_ENV === 'production' 
+  ? [
+      'https://frontend-chatbot-flutterflow.vercel.app',
+      /^https:\/\/frontend-chatbot-flutterflow.*\.vercel\.app$/
+    ]
+  : [
+      'http://localhost:3000', 
+      'http://localhost:5500', 
+      'http://127.0.0.1:5500'
+    ];
+
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
