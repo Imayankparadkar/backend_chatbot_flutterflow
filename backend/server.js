@@ -11,16 +11,12 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middleware
-
 app.use(cors({
   origin: ['http://localhost:3000', 'http://localhost:5500', 'http://127.0.0.1:5500'],
   credentials: true
 }));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
-
-// Serve static files
-app.use(express.static('public'));
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
@@ -155,47 +151,15 @@ function generateDataInsights(data) {
   return insights.slice(0, 5); // Return top 5 insights
 }
 
-// Routes
-// Add this route BEFORE your existing routes in server.js
-// Add this after line 118 (after the sessions = new Map(); line)
-
-// Root route - Add this to fix 404 on localhost:3000
-app.get('/', (req, res) => {
-    res.json({
-      message: 'Narrative AI Backend Server',
-      status: 'Running',
-      version: '1.0.0',
-      endpoints: {
-        health: '/api/health',
-        chat: '/api/chat (POST)',
-        upload: '/api/upload (POST)',
-        analyze: '/api/analyze (POST)',
-        languages: '/api/languages'
-      },
-      documentation: 'Visit /api/health to check server status'
-    });
-  });
-  
-  // Add a catch-all for undefined API routes
-  app.get('/api/*', (req, res) => {
-    res.status(404).json({
-      error: 'API endpoint not found',
-      availableEndpoints: [
-        'GET /api/health',
-        'POST /api/chat',
-        'POST /api/upload',
-        'POST /api/analyze',
-        'GET /api/languages'
-      ]
-    });
-  });
+// ============ API ROUTES ============
 
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'OK', 
     message: 'Server is running',
-    groqConnected: !!GROQ_API_KEY
+    groqConnected: !!GROQ_API_KEY,
+    timestamp: new Date().toISOString()
   });
 });
 
@@ -413,6 +377,60 @@ app.get('/api/languages', (req, res) => {
   res.json({ languages });
 });
 
+// ============ STATIC FILES & CATCH-ALL ============
+
+// Serve static files from public directory
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Root route - serve index.html if it exists
+app.get('/', (req, res) => {
+  const indexPath = path.join(__dirname, 'public', 'index.html');
+  if (fs.existsSync(indexPath)) {
+    res.sendFile(indexPath);
+  } else {
+    res.json({
+      message: 'Narrative AI Server Running',
+      status: 'OK',
+      availableEndpoints: [
+        'GET /api/health',
+        'POST /api/chat',
+        'POST /api/upload',
+        'POST /api/analyze',
+        'GET /api/languages'
+      ]
+    });
+  }
+});
+
+// Catch-all for undefined API routes
+app.all('/api/*', (req, res) => {
+  res.status(404).json({
+    error: 'API endpoint not found',
+    method: req.method,
+    path: req.path,
+    availableEndpoints: [
+      'GET /api/health',
+      'POST /api/chat',
+      'POST /api/upload',
+      'POST /api/analyze',
+      'GET /api/languages'
+    ]
+  });
+});
+
+// Catch-all for any other routes - serve index.html for SPA
+app.get('*', (req, res) => {
+  const indexPath = path.join(__dirname, 'public', 'index.html');
+  if (fs.existsSync(indexPath)) {
+    res.sendFile(indexPath);
+  } else {
+    res.status(404).json({
+      error: 'Page not found',
+      message: 'No static files found. Make sure your public directory contains index.html'
+    });
+  }
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error('Server Error:', err);
@@ -440,5 +458,12 @@ app.listen(PORT, () => {
   if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir, { recursive: true });
     console.log(`📁 Created uploads directory: ${uploadsDir}`);
+  }
+
+  // Create public directory if it doesn't exist
+  const publicDir = path.join(__dirname, 'public');
+  if (!fs.existsSync(publicDir)) {
+    fs.mkdirSync(publicDir, { recursive: true });
+    console.log(`📁 Created public directory: ${publicDir}`);
   }
 });
