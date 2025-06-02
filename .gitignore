@@ -1,0 +1,39 @@
+# Node modules
+node_modules/
+npm-debug.log*
+
+# Environment variables
+backend/.env
+
+# Logs
+logs
+*.log
+*.log.*
+log/
+
+# OS and editor junk
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# VSCode
+.vscode/
+
+# Build output
+dist/
+build/
+
+# Frontend
+frontend/node_modules/
+frontend/.env
+frontend/dist/
+frontend/build/
+
+# Optional: Ignore uploads or temp files
+uploads/
+temp/
+tmp/
+
+# Git
+.git/
