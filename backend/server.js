@@ -10,7 +10,7 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware
+// CORS Configuration
 const allowedOrigins = process.env.NODE_ENV === 'production' 
   ? [
       'https://frontend-chatbot-flutterflow.vercel.app',
@@ -21,6 +21,19 @@ const allowedOrigins = process.env.NODE_ENV === 'production'
       'http://localhost:5500', 
       'http://127.0.0.1:5500'
     ];
+
+// Add your frontend URL from environment variable if it exists
+if (process.env.FRONTEND_URL) {
+  allowedOrigins.push(process.env.FRONTEND_URL);
+}
+
+// Middleware
+app.use(cors({
+  origin: allowedOrigins,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+}));
 
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
@@ -339,8 +352,13 @@ app.post('/api/analyze', async (req, res) => {
     const prompt = `${analysisPrompts[analysisType] || analysisPrompts.general} for this business data: ${dataContext}. 
     Provide actionable insights from a ${role} perspective in ${languages[language]?.name || 'English'}.`;
 
+    // For production, use the deployed URL; for development, use localhost
+    const baseURL = process.env.NODE_ENV === 'production' 
+      ? process.env.RENDER_EXTERNAL_URL || `https://backend-chatbot-flutterflow.onrender.com`
+      : `http://localhost:${PORT}`;
+
     // Call chat endpoint internally
-    const chatResponse = await fetch(`http://localhost:${PORT}/api/chat`, {
+    const chatResponse = await fetch(`${baseURL}/api/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -428,7 +446,7 @@ app.all('/api/*', (req, res) => {
 // Catch-all for any other routes - serve index.html for SPA
 app.get('*', (req, res) => {
   const indexPath = path.join(__dirname, 'public', 'index.html');
-  if (fs.existsSync(indexPath)) {
+  if (fs.existsExists(indexPath)) {
     res.sendFile(indexPath);
   } else {
     res.status(404).json({
@@ -458,7 +476,8 @@ app.use((err, req, res, next) => {
 app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
   console.log(`📊 Groq API Key: ${GROQ_API_KEY ? '✅ Configured' : '❌ Missing'}`);
-  console.log(`🌍 CORS enabled for local development`);
+  console.log(`🌍 CORS Origins:`, allowedOrigins);
+  console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
   
   // Create uploads directory if it doesn't exist
   const uploadsDir = path.join(__dirname, 'uploads');
